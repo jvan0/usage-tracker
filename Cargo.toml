@@ -1,0 +1,72 @@
+[package]
+name = "usage-tracker"
+version = "1.0.0"
+edition = "2021"
+description = "Track AI provider usage (ChatGPT, Claude, Antigravity, OpenCode, Kilo Code, Cursor)"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async runtime — tokio es EL runtime async de Rust.
+# "full" habilita todas las features (timers, networking, filesystem, etc.)
+# Es como Node.js pero para Rust.
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client — reqwest es el fetch() de Rust.
+# default-features = false → NO activar native-tls (OpenSSL).
+# Solo usamos rustls (TLS puro en Rust, sin dependencias del sistema).
+# Esto es CLAVE para portabilidad, especialmente en Windows.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# JSON serialization/deserialization
+# serde = framework de serialización. serde_json = implementación para JSON.
+# "derive" nos deja usar #[derive(Deserialize)] y #[derive(Serialize)].
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# async-trait: permite usar async fn dentro de traits.
+async-trait = "0.1"
+
+# regex: expresiones regulares para parsear argumentos de procesos.
+# Lo usamos para extraer --csrf_token y --extension_server_port
+# de la línea de comandos del language server de Antigravity.
+regex = "1"
+
+# comfy-table: tablas bonitas en terminal.
+# Genera tablas con bordes Unicode automáticamente.
+comfy-table = "7"
+
+# colored: colores en terminal.
+# "Hola".red() → texto rojo. Simple y directo.
+colored = "2"
+
+# toml: parser de archivos TOML (como JSON pero más legible para configs).
+# Es el formato estándar de configuración en Rust (Cargo.toml es TOML).
+toml = "0.8"
+
+# dirs: encontrar directorios del sistema (home, config, etc.).
+dirs = "6"
+
+# eframe: framework de app de escritorio con egui.
+# eframe crea la ventana, egui dibuja los widgets DENTRO.
+# Es "immediate mode GUI" — se redibuja todo cada frame (como un videojuego).
+# No hay state binding ni data binding. Vos decís qué dibujar, egui lo dibuja.
+eframe = "0.31"
+
+# open: abrir URLs en el browser default del sistema.
+# open::that("https://claude.ai") → abre el browser.
+open = "5"
+
+# tray-icon + tao: solo en Windows (usa Win32 APIs nativas, no necesita GTK)
+[target.'cfg(windows)'.dependencies]
+tray-icon = "0.20"
+tao = "0.33"
+
+# Release profile: optimizar tamaño del binario.
+# Sin esto: 22MB. Con esto: ~11MB. Con UPX: ~5MB.
+[profile.release]
+opt-level = "z"      # optimizar para tamaño (no velocidad)
+lto = true           # link-time optimization (une todo, elimina código muerto)
+strip = true         # sacar debug symbols (nombres de funciones, etc.)
+codegen-units = 1    # mejor optimización (compila más lento, binario más chico)
