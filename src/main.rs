@@ -28,7 +28,7 @@ use providers::{all_providers, get_provider};
 #[derive(Parser)]
 #[command(
     name = "usage-tracker",
-    version = "1.0.0",
+    version = "1.0.1",
     about = "Track AI provider usage across ChatGPT, Claude, Antigravity, and OpenCode"
 )]
 struct Args {

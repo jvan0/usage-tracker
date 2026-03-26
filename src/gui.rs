@@ -755,7 +755,7 @@ impl UsageTrackerApp {
         ui.add_space(20.0);
 
         ui.heading("About");
-        ui.label("Usage Tracker v1.0.0");
+        ui.label("Usage Tracker v1.0.1");
         ui.label("Track AI usage: ChatGPT, Claude, Antigravity, OpenCode.");
     }
 }
