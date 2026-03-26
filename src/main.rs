@@ -9,6 +9,11 @@
 //   init     → crear config.toml de ejemplo
 // =============================================================================
 
+// En release de Windows, usar subsystem "windows" en vez de "console".
+// Esto EVITA que se abra una terminal al hacer doble click en el .exe.
+// En debug mantenemos la consola para poder ver errores/println.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use clap::{Parser, Subcommand};
 
 mod config;

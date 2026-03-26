@@ -24,7 +24,7 @@ fn run_tray_windows() {
     use tao::event_loop::{ControlFlow, EventLoopBuilder};
     use tray_icon::{
         menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-        Icon, TrayIconBuilder,
+        TrayIconBuilder,
     };
 
     let exe = std::env::current_exe().expect("No se pudo obtener la ruta del ejecutable");
