@@ -16,7 +16,6 @@ mod display;
 mod gui;
 mod provider;
 mod providers;
-mod tray;
 
 use providers::{all_providers, get_provider};
 
@@ -44,9 +43,6 @@ enum Commands {
 
     /// Open compact widget (always on top)
     Widget,
-
-    /// Start system tray (controls the widget)
-    Tray,
 
     /// Add to Windows startup (auto-launch)
     Install,
@@ -104,7 +100,6 @@ fn main() {
         }
         Some(Commands::Gui) => handle_gui(),
         Some(Commands::Widget) => handle_widget(),
-        Some(Commands::Tray) => tray::run_tray(),
         Some(Commands::Install) => handle_install(),
         Some(Commands::Uninstall) => handle_uninstall(),
         Some(Commands::Init) => handle_init(),
@@ -247,6 +242,9 @@ fn handle_init() {
 }
 
 // --- WIDGET: mini-ventana compacta -----------------------------------------
+//
+// Abre una ventana chiquita, siempre arriba, que muestra el status de cada provider.
+// Ideal para tener visible mientras trabajás.
 fn handle_widget() {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
@@ -278,74 +276,58 @@ fn handle_install() {
         return;
     }
 
+    // Obtener la ruta del ejecutable actual
     let exe = std::env::current_exe()
         .expect("No se pudo obtener la ruta del ejecutable");
+
     let exe_str = exe.display().to_string();
 
-    let appdata = std::env::var("APPDATA").unwrap_or_default();
-    let userprofile = std::env::var("USERPROFILE").unwrap_or_default();
+    // Usar reg.exe para agregar al startup
+    // Alternativa: crear un acceso directo en la carpeta Startup
+    let startup_folder = std::env::var("APPDATA")
+        .map(|appdata| format!("{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup", appdata))
+        .unwrap_or_default();
 
-    let mut ok = true;
-
-    // 1. Acceso directo en Startup (auto-start)
-    let startup_folder = format!("{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup", appdata);
-    let startup_shortcut = format!("{}\\usage-tracker.lnk", startup_folder);
-
-    let ps_startup = format!(
-        r#"$ws = New-Object -ComObject WScript.Shell
-$sc = $ws.CreateShortcut('{}')
-$sc.TargetPath = '{}'
-$sc.Arguments = 'tray'
-$sc.Description = 'AI Usage Tracker - System Tray'
-$sc.Save()"#,
-        startup_shortcut, exe_str
-    );
-
-    match std::process::Command::new("powershell").args(["-Command", &ps_startup]).output() {
-        Ok(out) if out.status.success() => {
-            println!("✅ Auto-start: {}", startup_shortcut);
-        }
-        _ => {
-            eprintln!("⚠ No se pudo crear acceso directo en Startup.");
-            ok = false;
-        }
+    if startup_folder.is_empty() {
+        eprintln!("No se pudo encontrar la carpeta Startup.");
+        return;
     }
 
-    // 2. Acceso directo en Escritorio
-    let desktop_folder = format!("{}\\Desktop", userprofile);
-    let desktop_shortcut = format!("{}\\Usage Tracker.lnk", desktop_folder);
+    let shortcut_path = format!("{}\\usage-tracker.lnk", startup_folder);
 
-    let ps_desktop = format!(
+    // Crear un .lnk usando PowerShell (más portable que COM)
+    let ps_script = format!(
         r#"$ws = New-Object -ComObject WScript.Shell
 $sc = $ws.CreateShortcut('{}')
 $sc.TargetPath = '{}'
-$sc.Arguments = 'gui'
+$sc.Arguments = 'widget'
 $sc.Description = 'AI Usage Tracker'
 $sc.Save()"#,
-        desktop_shortcut, exe_str
+        shortcut_path, exe_str
     );
 
-    match std::process::Command::new("powershell").args(["-Command", &ps_desktop]).output() {
-        Ok(out) if out.status.success() => {
-            println!("✅ Escritorio: {}", desktop_shortcut);
-        }
-        _ => {
-            eprintln!("⚠ No se pudo crear acceso directo en el escritorio.");
-            ok = false;
-        }
-    }
+    let output = std::process::Command::new("powershell")
+        .args(["-Command", &ps_script])
+        .output();
 
-    if ok {
-        println!("");
-        println!("🎯 Usage Tracker instalado!");
-        println!("   - Se abre automáticamente al iniciar Windows (tray)");
-        println!("   - Acceso directo en el escritorio (GUI)");
-    } else {
-        println!("");
-        println!("Alternativa manual:");
-        println!("  1. Presioná Win+R");
-        println!("  2. Escribí: shell:startup → pegá acceso directo para auto-start");
-        println!("  3. Escribí: shell:desktop → pegá acceso directo para escritorio");
+    match output {
+        Ok(out) if out.status.success() => {
+            println!("✅ Auto-start configurado!");
+            println!("   El widget se abrirá automáticamente al iniciar Windows.");
+            println!("   Acceso directo: {}", shortcut_path);
+        }
+        Ok(out) => {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            eprintln!("Error creando acceso directo: {}", stderr);
+            println!("");
+            println!("Alternativa manual:");
+            println!("  1. Presioná Win+R");
+            println!("  2. Escribí: shell:startup");
+            println!("  3. Creá un acceso directo a: {} widget", exe_str);
+        }
+        Err(e) => {
+            eprintln!("Error ejecutando PowerShell: {}", e);
+        }
     }
 }
 
